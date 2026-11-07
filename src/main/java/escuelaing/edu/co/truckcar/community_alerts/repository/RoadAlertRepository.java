@@ -55,6 +55,14 @@ public interface RoadAlertRepository extends JpaRepository<RoadAlert, Long> {
 
     List<RoadAlert> findByIsActiveTrueOrderByReportedAtDesc();
 
+    /** Candidatas a vencer: activas y reportadas antes del TTL más corto. */
+    List<RoadAlert> findByIsActiveTrueAndReportedAtBefore(LocalDateTime cutoff);
+
+    /** Desactiva solo si sigue activa: con varias réplicas, una sola gana y publica alert.expired. */
+    @Modifying
+    @Query("UPDATE RoadAlert a SET a.isActive = false WHERE a.id = :id AND a.isActive = true")
+    int deactivateIfActive(@Param("id") Long id);
+
     @Modifying
     @Query("UPDATE RoadAlert a SET a.confirmationsCount = a.confirmationsCount + 1 WHERE a.id = :id")
     int incrementConfirmation(@Param("id") Long id);

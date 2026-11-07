@@ -220,6 +220,32 @@ public class RoadAlertService implements IRoadAlertService {
                 .build();
     }
 
+    /**
+     * Vence las alertas que pasaron su TTL (24 h; un derrumbe, 6 h): las desactiva en la base y publica alert.expired
+     * por el outbox, para que la torre y los mapas las retiren. Las lecturas ya las ocultaban por TTL; esto deja el
+     * estado guardado igual a lo que se muestra y avisa a quien escucha el tópico.
+     */
+    @org.springframework.scheduling.annotation.Scheduled(
+            fixedDelayString = "${truckcar.alerts.expiry-check-interval-ms:60000}",
+            initialDelayString = "${truckcar.alerts.expiry-check-interval-ms:60000}")
+    @Transactional
+    public int expireAlerts() {
+        LocalDateTime oldestLiving = LocalDateTime.now().minusHours(Math.min(defaultTtlHours, derrumbeTtlHours));
+        int expired = 0;
+        for (RoadAlert alert : repository.findByIsActiveTrueAndReportedAtBefore(oldestLiving)) {
+            if (isActiveWithinTtl(alert) || repository.deactivateIfActive(alert.getId()) != 1) {
+                continue;
+            }
+            alert.setIsActive(false);
+            outboxEventService.enqueueAlertEvent(alert, "alert.expired", "EXPIRED");
+            expired++;
+        }
+        if (expired > 0) {
+            log.info("Alertas vencidas por TTL: {}", expired);
+        }
+        return expired;
+    }
+
     private boolean isActiveWithinTtl(RoadAlert alert) {
         LocalDateTime expiresAt = alert.getReportedAt().plusHours(ttlHours(alert.getAlertType()));
         return expiresAt.isAfter(LocalDateTime.now());
