@@ -104,4 +104,21 @@ class SosServiceTest {
         verify(outbox, times(1)).enqueueSosEvent(any(), events.capture());
         assertThat(events.getValue()).isEqualTo(SosService.SOS_ACKNOWLEDGED);
     }
+
+    @Test
+    void resolvingIsIdempotentAndRecordsWhoResolved() {
+        SosAlert acked = SosAlert.builder().id(15L).status(SosStatus.ACKNOWLEDGED).driverId("driver-ana").build();
+        when(repository.findById(15L)).thenReturn(Optional.of(acked));
+
+        SosAlert first = service.resolve(15L, "coord-1", "Ambulancia despachada y conductor a salvo");
+        SosAlert second = service.resolve(15L, "coord-2", "Ignorado");
+
+        assertThat(first.getStatus()).isEqualTo(SosStatus.RESOLVED);
+        assertThat(first.getResolvedBy()).isEqualTo("coord-1");
+        assertThat(first.getResolutionNotes()).isEqualTo("Ambulancia despachada y conductor a salvo");
+        assertThat(second.getResolvedBy()).isEqualTo("coord-1");
+        ArgumentCaptor<String> events = ArgumentCaptor.forClass(String.class);
+        verify(outbox, times(1)).enqueueSosEvent(any(), events.capture());
+        assertThat(events.getValue()).isEqualTo(SosService.SOS_RESOLVED);
+    }
 }

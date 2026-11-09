@@ -30,4 +30,7 @@ public class RoadAlertResponse {
     private Boolean isActive;
     private LocalDateTime reportedAt;
     private LocalDateTime syncedAt;
+    private LocalDateTime resolvedAt;
+    private String resolvedBy;
+    private String resolutionNotes;
 }

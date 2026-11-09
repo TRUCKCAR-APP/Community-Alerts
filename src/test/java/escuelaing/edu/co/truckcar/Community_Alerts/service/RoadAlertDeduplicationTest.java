@@ -116,4 +116,22 @@ class RoadAlertDeduplicationTest {
         assertThat(alert.getConfirmationsCount()).isEqualTo(2);
         verify(confirmationRepository).save(any(RoadAlertConfirmation.class));
     }
+
+    @Test
+    void resolveAlertDeactivatesAndEmitsResolvedEvent() {
+        RoadAlert alert = RoadAlert.builder().id(20L).alertType(AlertType.ACCIDENTE).isActive(true).build();
+        when(repository.findById(20L)).thenReturn(Optional.of(alert));
+        when(repository.save(any(RoadAlert.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        RoadAlertService service = new RoadAlertService(repository, new GeometryFactory(), outboxEventService,
+                confirmationRepository);
+
+        var response = service.resolveAlert(20L, "coord-1", "Vía despejada por grúa");
+
+        assertThat(response.getIsActive()).isFalse();
+        assertThat(response.getResolvedBy()).isEqualTo("coord-1");
+        assertThat(response.getResolutionNotes()).isEqualTo("Vía despejada por grúa");
+        assertThat(alert.getIsActive()).isFalse();
+        verify(outboxEventService).enqueueAlertEvent(alert, "alert.resolved", "RESOLVED");
+    }
 }

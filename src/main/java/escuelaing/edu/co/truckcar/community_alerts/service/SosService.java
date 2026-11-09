@@ -28,6 +28,7 @@ public class SosService {
 
     public static final String SOS_TRIGGERED = "alert.sos.triggered";
     public static final String SOS_ACKNOWLEDGED = "alert.sos.acknowledged";
+    public static final String SOS_RESOLVED = "alert.sos.resolved";
 
     private final SosAlertRepository repository;
     private final OutboxEventService outbox;
@@ -80,7 +81,7 @@ public class SosService {
 
     @Transactional(readOnly = true)
     public List<SosAlert> active() {
-        return repository.findByStatusOrderByTriggeredAtDesc(SosStatus.ACTIVE);
+        return repository.findByStatusInOrderByTriggeredAtDesc(List.of(SosStatus.ACTIVE, SosStatus.ACKNOWLEDGED));
     }
 
     /** Idempotente: atender un SOS ya atendido devuelve su estado sin volver a emitir el evento. */
@@ -97,6 +98,27 @@ public class SosService {
         SosAlert saved = repository.save(sos);
         outbox.enqueueSosEvent(saved, SOS_ACKNOWLEDGED);
         publishAfterCommit();
+        return saved;
+    }
+
+    /** Idempotente: resolver un SOS ya resuelto devuelve su estado sin volver a emitir el evento. */
+    @Transactional
+    public SosAlert resolve(Long sosId, String coordinatorId, String notes) {
+        SosAlert sos = repository.findById(sosId)
+                .orElseThrow(() -> new AlertNotFoundException("No existe el SOS #" + sosId));
+        if (sos.getStatus() == SosStatus.RESOLVED) {
+            return sos;
+        }
+        sos.setStatus(SosStatus.RESOLVED);
+        sos.setResolvedBy(coordinatorId);
+        sos.setResolvedAt(Instant.now());
+        if (notes != null && !notes.isBlank()) {
+            sos.setResolutionNotes(notes.trim());
+        }
+        SosAlert saved = repository.save(sos);
+        outbox.enqueueSosEvent(saved, SOS_RESOLVED);
+        publishAfterCommit();
+        log.info("SOS #{} resuelto por coordinador {}", sosId, coordinatorId);
         return saved;
     }
 

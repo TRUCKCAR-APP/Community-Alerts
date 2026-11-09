@@ -217,7 +217,30 @@ public class RoadAlertService implements IRoadAlertService {
                 .isActive(entity.getIsActive())
                 .reportedAt(entity.getReportedAt())
                 .syncedAt(entity.getSyncedAt())
+                .resolvedAt(entity.getResolvedAt())
+                .resolvedBy(entity.getResolvedBy())
+                .resolutionNotes(entity.getResolutionNotes())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public RoadAlertResponse resolveAlert(Long alertId, String userId, String resolutionNotes) {
+        RoadAlert alert = repository.findById(alertId)
+                .orElseThrow(() -> new AlertNotFoundException("Alerta no encontrada con ID: " + alertId));
+        if (Boolean.FALSE.equals(alert.getIsActive())) {
+            return mapToResponse(alert);
+        }
+        alert.setIsActive(false);
+        alert.setResolvedAt(LocalDateTime.now());
+        alert.setResolvedBy(userId);
+        if (resolutionNotes != null && !resolutionNotes.isBlank()) {
+            alert.setResolutionNotes(resolutionNotes.trim());
+        }
+        RoadAlert saved = repository.save(alert);
+        outboxEventService.enqueueAlertEvent(saved, "alert.resolved", "RESOLVED");
+        log.info("Alerta vial #{} resuelta por {}", alertId, userId);
+        return mapToResponse(saved);
     }
 
     /**

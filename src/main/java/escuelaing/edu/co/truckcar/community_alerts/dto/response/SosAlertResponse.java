@@ -24,6 +24,9 @@ public class SosAlertResponse {
     private Instant receivedAt;
     private String acknowledgedBy;
     private Instant acknowledgedAt;
+    private String resolvedBy;
+    private Instant resolvedAt;
+    private String resolutionNotes;
 
     public static SosAlertResponse of(SosAlert sos) {
         return SosAlertResponse.builder()
@@ -41,6 +44,9 @@ public class SosAlertResponse {
                 .receivedAt(sos.getReceivedAt())
                 .acknowledgedBy(sos.getAcknowledgedBy())
                 .acknowledgedAt(sos.getAcknowledgedAt())
+                .resolvedBy(sos.getResolvedBy())
+                .resolvedAt(sos.getResolvedAt())
+                .resolutionNotes(sos.getResolutionNotes())
                 .build();
     }
 }

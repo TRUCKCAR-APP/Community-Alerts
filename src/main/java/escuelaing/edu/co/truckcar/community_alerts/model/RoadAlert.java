@@ -72,4 +72,13 @@ public class RoadAlert {
 
     @Column(name = "synced_at")
     private LocalDateTime syncedAt;
+
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
+
+    @Column(name = "resolved_by")
+    private String resolvedBy;
+
+    @Column(name = "resolution_notes", length = 500)
+    private String resolutionNotes;
 }

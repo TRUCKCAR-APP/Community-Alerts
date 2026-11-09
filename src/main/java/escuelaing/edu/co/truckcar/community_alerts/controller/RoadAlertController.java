@@ -55,6 +55,15 @@ public class RoadAlertController {
         return ResponseEntity.ok(service.confirmAlert(alertId, requireUser(authenticatedUserId)));
     }
 
+    /** Cierra/resuelve la novedad alertada (tráfico despejado, derrumbe removido, etc.). */
+    @PatchMapping("/{alertId}/resolve")
+    public ResponseEntity<RoadAlertResponse> resolveAlert(
+            @PathVariable Long alertId,
+            @RequestParam(required = false) String notes,
+            @RequestHeader(value = AUTH_USER_HEADER, required = false) String authenticatedUserId) {
+        return ResponseEntity.ok(service.resolveAlert(alertId, requireUser(authenticatedUserId), notes));
+    }
+
     @GetMapping("/nearby")
     public ResponseEntity<List<RoadAlertResponse>> getNearbyAlerts(
             @RequestParam double latitude,

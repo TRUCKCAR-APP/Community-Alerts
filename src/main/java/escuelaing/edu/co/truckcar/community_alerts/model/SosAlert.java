@@ -73,4 +73,13 @@ public class SosAlert {
 
     @Column(name = "acknowledged_at")
     private Instant acknowledgedAt;
+
+    @Column(name = "resolved_by")
+    private String resolvedBy;
+
+    @Column(name = "resolved_at")
+    private Instant resolvedAt;
+
+    @Column(name = "resolution_notes", length = 500)
+    private String resolutionNotes;
 }

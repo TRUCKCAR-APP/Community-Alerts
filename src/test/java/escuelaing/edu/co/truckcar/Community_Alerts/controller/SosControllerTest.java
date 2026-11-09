@@ -66,5 +66,7 @@ class SosControllerTest {
         assertThat(controller.active("coord-1", "COORDINADOR")).hasSize(1);
         when(service.acknowledge(1L, "admin-1")).thenReturn(sos());
         assertThat(controller.acknowledge(1L, "admin-1", "ADMIN").getId()).isEqualTo(1L);
+        when(service.resolve(1L, "admin-1", "Atendido")).thenReturn(sos());
+        assertThat(controller.resolve(1L, "Atendido", "admin-1", "ADMIN").getId()).isEqualTo(1L);
     }
 }

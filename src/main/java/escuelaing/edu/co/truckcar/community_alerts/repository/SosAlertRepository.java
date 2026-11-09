@@ -13,4 +13,6 @@ public interface SosAlertRepository extends JpaRepository<SosAlert, Long> {
     Optional<SosAlert> findByClientEventId(UUID clientEventId);
 
     List<SosAlert> findByStatusOrderByTriggeredAtDesc(SosStatus status);
+
+    List<SosAlert> findByStatusInOrderByTriggeredAtDesc(java.util.Collection<SosStatus> statuses);
 }

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
@@ -65,6 +66,15 @@ public class SosController {
             @RequestHeader(value = AUTH_USER_HEADER, required = false) String userId,
             @RequestHeader(value = AUTH_ROLE_HEADER, required = false) String role) {
         return SosAlertResponse.of(service.acknowledge(sosId, requireTower(userId, role)));
+    }
+
+    @PatchMapping("/{sosId}/resolve")
+    public SosAlertResponse resolve(
+            @PathVariable Long sosId,
+            @RequestParam(required = false) String notes,
+            @RequestHeader(value = AUTH_USER_HEADER, required = false) String userId,
+            @RequestHeader(value = AUTH_ROLE_HEADER, required = false) String role) {
+        return SosAlertResponse.of(service.resolve(sosId, requireTower(userId, role), notes));
     }
 
     private static String requireTower(String userId, String role) {

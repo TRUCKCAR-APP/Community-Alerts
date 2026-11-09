@@ -14,4 +14,5 @@ public interface IRoadAlertService {
     List<RoadAlertResponse> getNearbyAlerts(double latitude, double longitude, double radiusMeters);
     List<RoadAlertResponse> getAllActiveAlerts();
     SyncSummaryResponse syncOfflineBatch(OfflineBatchSyncRequest batchRequest);
+    RoadAlertResponse resolveAlert(Long alertId, String userId, String resolutionNotes);
 }
