@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import escuelaing.edu.co.truckcar.community_alerts.dto.request.CreateRoadAlertRequest;
 import escuelaing.edu.co.truckcar.community_alerts.dto.request.SosRequest;
+import escuelaing.edu.co.truckcar.community_alerts.dto.request.SosRequestReader;
 import escuelaing.edu.co.truckcar.community_alerts.exception.AlertAlreadyConfirmedException;
 import escuelaing.edu.co.truckcar.community_alerts.exception.AlertNotFoundException;
 import escuelaing.edu.co.truckcar.community_alerts.service.IRoadAlertService;
@@ -107,7 +108,8 @@ public class AlertSyncService {
                 alertService.confirmAlert(alertId.asLong(), driverId);
             }
             case ALERT_SOS -> {
-                SosRequest sos = validated(event.getPayload(), SosRequest.class, "SOS mal formado");
+                // Un SOS de la cola offline nunca se rechaza por sus datos (igual que el POST en línea).
+                SosRequest sos = SosRequestReader.read(event.getPayload());
                 sos.setClientEventId(event.getClientEventId());
                 sosService.trigger(driverId, sos, event.getOccurredAt());
             }

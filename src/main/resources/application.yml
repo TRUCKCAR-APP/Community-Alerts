@@ -46,6 +46,10 @@ truckcar:
       road-alerts: ${TRUCKCAR_ROAD_ALERTS_TOPIC:truckcar.events.road-alerts}
       # Botón SOS: tópico de alta prioridad (Notifications y torre de control).
       sos: ${TRUCKCAR_SOS_TOPIC:truckcar.events.sos}
+  services:
+    # SOS sin ubicación: se completa con la última posición del conductor en fleets-drivers (llamada interna).
+    fleets-drivers-url: ${TRUCKCAR_SERVICES_FLEETS_DRIVERS_URL:http://localhost:8081}
+    fleets-drivers-timeout-ms: ${TRUCKCAR_SERVICES_FLEETS_DRIVERS_TIMEOUT_MS:1500}
   outbox:
     publish-interval-ms: ${TRUCKCAR_OUTBOX_PUBLISH_INTERVAL_MS:1000}
     batch-size: ${TRUCKCAR_OUTBOX_BATCH_SIZE:100}

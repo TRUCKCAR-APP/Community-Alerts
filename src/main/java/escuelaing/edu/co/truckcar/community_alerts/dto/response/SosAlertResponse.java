@@ -18,6 +18,10 @@ public class SosAlertResponse {
     private Double latitude;
     private Double longitude;
     private Double accuracyMeters;
+    /** DEVICE_GPS, LAST_KNOWN (última posición en fleets-drivers) o UNKNOWN (latitude/longitude nulas). */
+    private String locationSource;
+    /** Hora de la posición LAST_KNOWN; nula en los demás casos. */
+    private Instant locationRecordedAt;
     private String message;
     private String status;
     private Instant triggeredAt;
@@ -27,6 +31,8 @@ public class SosAlertResponse {
     private String resolvedBy;
     private Instant resolvedAt;
     private String resolutionNotes;
+    private Instant cancelledAt;
+    private String cancellationReason;
 
     public static SosAlertResponse of(SosAlert sos) {
         return SosAlertResponse.builder()
@@ -38,6 +44,8 @@ public class SosAlertResponse {
                 .latitude(sos.getLatitude())
                 .longitude(sos.getLongitude())
                 .accuracyMeters(sos.getAccuracyMeters())
+                .locationSource(sos.getLocationSource() == null ? null : sos.getLocationSource().name())
+                .locationRecordedAt(sos.getLocationRecordedAt())
                 .message(sos.getMessage())
                 .status(sos.getStatus().name())
                 .triggeredAt(sos.getTriggeredAt())
@@ -47,6 +55,8 @@ public class SosAlertResponse {
                 .resolvedBy(sos.getResolvedBy())
                 .resolvedAt(sos.getResolvedAt())
                 .resolutionNotes(sos.getResolutionNotes())
+                .cancelledAt(sos.getCancelledAt())
+                .cancellationReason(sos.getCancellationReason())
                 .build();
     }
 }

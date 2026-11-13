@@ -1,11 +1,13 @@
 package escuelaing.edu.co.truckcar.community_alerts.controller;
 
-import escuelaing.edu.co.truckcar.community_alerts.dto.request.SosRequest;
+import com.fasterxml.jackson.databind.JsonNode;
+import escuelaing.edu.co.truckcar.community_alerts.dto.request.SosCancelRequest;
+import escuelaing.edu.co.truckcar.community_alerts.dto.request.SosRequestReader;
 import escuelaing.edu.co.truckcar.community_alerts.dto.response.SosAlertResponse;
 import escuelaing.edu.co.truckcar.community_alerts.exception.AlertUnauthenticatedException;
 import escuelaing.edu.co.truckcar.community_alerts.exception.SosAccessDeniedException;
+import escuelaing.edu.co.truckcar.community_alerts.model.SosStatus;
 import escuelaing.edu.co.truckcar.community_alerts.service.SosService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,26 +40,45 @@ public class SosController {
 
     private final SosService service;
 
-    /** 202: el SOS quedó registrado y su evento en camino. Un reintento con el mismo clientEventId responde 200. */
+    /**
+     * 202: el SOS quedó registrado y su evento en camino. Un reintento con el mismo clientEventId responde 200.
+     * Nunca responde 400 por los datos del SOS: sin ubicación válida se completa en el servidor (ver SosService).
+     */
     @PostMapping
     public ResponseEntity<SosAlertResponse> trigger(
-            @Valid @RequestBody SosRequest request,
+            @RequestBody JsonNode body,
             @RequestHeader(value = AUTH_USER_HEADER, required = false) String userId,
             @RequestHeader(value = AUTH_ROLE_HEADER, required = false) String role) {
         String driverId = requireUser(userId);
         if (!"CONDUCTOR".equals(role)) {
             throw new SosAccessDeniedException("Solo un conductor puede activar el botón SOS");
         }
-        SosService.Result result = service.trigger(driverId, request, Instant.now());
+        SosService.Result result = service.trigger(driverId, SosRequestReader.read(body), Instant.now());
         return new ResponseEntity<>(SosAlertResponse.of(result.sos()), result.created() ? HttpStatus.ACCEPTED : HttpStatus.OK);
     }
 
+    /** Sin status, las emergencias abiertas (ACTIVE y ACKNOWLEDGED), como antes. Ej.: ?status=ACTIVE */
     @GetMapping
     public List<SosAlertResponse> active(
+            @RequestParam(name = "status", required = false) List<SosStatus> statuses,
             @RequestHeader(value = AUTH_USER_HEADER, required = false) String userId,
             @RequestHeader(value = AUTH_ROLE_HEADER, required = false) String role) {
         requireTower(userId, role);
-        return service.active().stream().map(SosAlertResponse::of).toList();
+        return service.list(statuses).stream().map(SosAlertResponse::of).toList();
+    }
+
+    /** El conductor anula su propio SOS (falsa alarma). El cuerpo { "reason": "..." } es opcional. */
+    @PatchMapping("/{sosId}/cancel")
+    public SosAlertResponse cancel(
+            @PathVariable Long sosId,
+            @RequestBody(required = false) SosCancelRequest body,
+            @RequestHeader(value = AUTH_USER_HEADER, required = false) String userId,
+            @RequestHeader(value = AUTH_ROLE_HEADER, required = false) String role) {
+        String driverId = requireUser(userId);
+        if (!"CONDUCTOR".equals(role)) {
+            throw new SosAccessDeniedException("Solo el conductor que lo activó puede anular un SOS");
+        }
+        return SosAlertResponse.of(service.cancel(sosId, driverId, body == null ? null : body.getReason()));
     }
 
     @PatchMapping("/{sosId}/acknowledge")
