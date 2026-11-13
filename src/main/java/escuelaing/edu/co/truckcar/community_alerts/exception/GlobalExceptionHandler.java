@@ -37,6 +37,11 @@ public class GlobalExceptionHandler {
         return simpleError(HttpStatus.CONFLICT, "Alerta ya confirmada", ex.getMessage());
     }
 
+    @ExceptionHandler(SosNotCancellableException.class)
+    public ResponseEntity<Map<String, Object>> handleSosNotCancellable(SosNotCancellableException ex) {
+        return simpleError(HttpStatus.CONFLICT, "SOS ya resuelto", ex.getMessage());
+    }
+
     @ExceptionHandler(SosAccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleSosAccessDenied(SosAccessDeniedException ex) {
         return simpleError(HttpStatus.FORBIDDEN, "Acceso denegado", ex.getMessage());

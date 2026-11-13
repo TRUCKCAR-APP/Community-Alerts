@@ -45,11 +45,18 @@ public class SosAlert {
     @Column(name = "load_id")
     private Long loadId;
 
-    @Column(nullable = false)
+    /** Nulas cuando locationSource es UNKNOWN: un SOS sin ubicación se registra igual. */
     private Double latitude;
 
-    @Column(nullable = false)
     private Double longitude;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "location_source", nullable = false, length = 20)
+    private SosLocationSource locationSource;
+
+    /** Momento en que se tomó la posición LAST_KNOWN (para saber qué tan vieja es). Nulo en DEVICE_GPS y UNKNOWN. */
+    @Column(name = "location_recorded_at")
+    private Instant locationRecordedAt;
 
     @Column(name = "accuracy_meters")
     private Double accuracyMeters;
@@ -82,4 +89,10 @@ public class SosAlert {
 
     @Column(name = "resolution_notes", length = 500)
     private String resolutionNotes;
+
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+
+    @Column(name = "cancellation_reason", length = 500)
+    private String cancellationReason;
 }
