@@ -20,6 +20,11 @@ public class JacksonConfig {
         mapper.registerModule(new JavaTimeModule());
         mapper.registerModule(new JtsModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // Lector tolerante (como el ObjectMapper de Spring Boot): un campo nuevo no rompe la lectura.
+        mapper.disable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        // Sin el mixin de Spring, las propiedades de un ProblemDetail (message, details...) saldrían en "properties".
+        mapper.addMixIn(org.springframework.http.ProblemDetail.class,
+                org.springframework.http.converter.json.ProblemDetailJacksonMixin.class);
         return mapper;
     }
 
