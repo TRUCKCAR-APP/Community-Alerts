@@ -78,4 +78,13 @@ class RoadAlertControllerErrorHandlingTest {
                         .contentType(MediaType.APPLICATION_JSON).content(VALID_BODY))
                 .andExpect(status().isCreated());
     }
+
+    @Test
+    void heavyTrafficIsAReportableType() throws Exception {
+        when(service.createAlert(any())).thenReturn(RoadAlertResponse.builder().id(2L).build());
+        mvc.perform(post("/api/v1/alerts").header("X-Auth-User", "driver-ana")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY.replace("DERRUMBE", "TRAFICO_PESADO").replace("Derrumbe parcial", "Trancón")))
+                .andExpect(status().isCreated());
+    }
 }
