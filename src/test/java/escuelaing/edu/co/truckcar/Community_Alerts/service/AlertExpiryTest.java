@@ -45,6 +45,7 @@ class AlertExpiryTest {
         service = new RoadAlertService(repository, new GeometryFactory(), outboxEventService, confirmationRepository);
         ReflectionTestUtils.setField(service, "defaultTtlHours", 24L);
         ReflectionTestUtils.setField(service, "derrumbeTtlHours", 6L);
+        ReflectionTestUtils.setField(service, "traficoTtlHours", 2L);
     }
 
     private static RoadAlert alert(long id, AlertType type, int hoursAgo) {
@@ -57,12 +58,17 @@ class AlertExpiryTest {
         RoadAlert oldLandslide = alert(1, AlertType.DERRUMBE, 7);   // TTL 6 h: vencida
         RoadAlert recentWork = alert(2, AlertType.OBRA_EN_VIA, 7);  // TTL 24 h: sigue activa
         RoadAlert oldAccident = alert(3, AlertType.ACCIDENTE, 25);  // TTL 24 h: vencida
+        RoadAlert oldTraffic = alert(4, AlertType.TRAFICO_PESADO, 3); // TTL 2 h: vencida
+        RoadAlert recentTraffic = alert(5, AlertType.TRAFICO_PESADO, 1); // TTL 2 h: sigue activa
         when(repository.findByIsActiveTrueAndReportedAtBefore(any()))
-                .thenReturn(List.of(oldLandslide, recentWork, oldAccident));
+                .thenReturn(List.of(oldLandslide, recentWork, oldAccident, oldTraffic, recentTraffic));
         when(repository.deactivateIfActive(1L)).thenReturn(1);
         when(repository.deactivateIfActive(3L)).thenReturn(1);
+        when(repository.deactivateIfActive(4L)).thenReturn(1);
 
-        assertThat(service.expireAlerts()).isEqualTo(2);
+        assertThat(service.expireAlerts()).isEqualTo(3);
+        verify(outboxEventService).enqueueAlertEvent(oldTraffic, "alert.expired", "EXPIRED");
+        verify(repository, never()).deactivateIfActive(5L);
 
         verify(outboxEventService).enqueueAlertEvent(oldLandslide, "alert.expired", "EXPIRED");
         verify(outboxEventService).enqueueAlertEvent(oldAccident, "alert.expired", "EXPIRED");
@@ -79,8 +85,8 @@ class AlertExpiryTest {
 
         ArgumentCaptor<LocalDateTime> cutoff = ArgumentCaptor.forClass(LocalDateTime.class);
         verify(repository).findByIsActiveTrueAndReportedAtBefore(cutoff.capture());
-        assertThat(cutoff.getValue()).isBetween(LocalDateTime.now().minusHours(6).minusMinutes(1),
-                LocalDateTime.now().minusHours(6).plusMinutes(1));
+        assertThat(cutoff.getValue()).isBetween(LocalDateTime.now().minusHours(2).minusMinutes(1),
+                LocalDateTime.now().minusHours(2).plusMinutes(1));
     }
 
     @Test

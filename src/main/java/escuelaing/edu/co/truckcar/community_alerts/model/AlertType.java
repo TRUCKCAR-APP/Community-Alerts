@@ -7,5 +7,7 @@ public enum AlertType {
     GALIBO_REDUCIDO,
     PARADOR_SEGURO,
     ACCIDENTE,
-    OBRA_EN_VIA
+    OBRA_EN_VIA,
+    /** Congestión o trancón: no bloquea la vía, avisa demoras. Vence antes que las demás (ttl.trafico-hours). */
+    TRAFICO_PESADO
 }

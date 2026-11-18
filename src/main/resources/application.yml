@@ -61,6 +61,8 @@ truckcar:
     ttl:
       default-hours: ${TRUCKCAR_ALERT_TTL_DEFAULT_HOURS:24}
       derrumbe-hours: ${TRUCKCAR_ALERT_TTL_DERRUMBE_HOURS:6}
+      # El tráfico pesado cambia rápido: se descarta antes que un derrumbe o una obra.
+      trafico-hours: ${TRUCKCAR_ALERT_TTL_TRAFICO_HOURS:2}
 # ── Observabilidad ──────────────────────────────────────────────────────────────────────────────
 # /actuator/prometheus solo es accesible dentro de la red interna: el api-gateway no enruta /actuator/**.
 # Las trazas se exportan por OTLP al otel-collector cuando se define MANAGEMENT_OTLP_TRACING_ENDPOINT (en Docker,

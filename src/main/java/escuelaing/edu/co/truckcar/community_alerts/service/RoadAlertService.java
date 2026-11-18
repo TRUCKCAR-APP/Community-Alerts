@@ -50,6 +50,9 @@ public class RoadAlertService implements IRoadAlertService {
     @org.springframework.beans.factory.annotation.Value("${truckcar.alerts.ttl.derrumbe-hours:6}")
     private long derrumbeTtlHours;
 
+    @org.springframework.beans.factory.annotation.Value("${truckcar.alerts.ttl.trafico-hours:2}")
+    private long traficoTtlHours;
+
     @Override
     @Transactional
     public RoadAlertResponse createAlert(CreateRoadAlertRequest request) {
@@ -253,7 +256,7 @@ public class RoadAlertService implements IRoadAlertService {
             initialDelayString = "${truckcar.alerts.expiry-check-interval-ms:60000}")
     @Transactional
     public int expireAlerts() {
-        LocalDateTime oldestLiving = LocalDateTime.now().minusHours(Math.min(defaultTtlHours, derrumbeTtlHours));
+        LocalDateTime oldestLiving = LocalDateTime.now().minusHours(Math.min(defaultTtlHours, Math.min(derrumbeTtlHours, traficoTtlHours)));
         int expired = 0;
         for (RoadAlert alert : repository.findByIsActiveTrueAndReportedAtBefore(oldestLiving)) {
             if (isActiveWithinTtl(alert) || repository.deactivateIfActive(alert.getId()) != 1) {
@@ -277,6 +280,7 @@ public class RoadAlertService implements IRoadAlertService {
     private long ttlHours(AlertType alertType) {
         return switch (alertType) {
             case DERRUMBE -> derrumbeTtlHours;
+            case TRAFICO_PESADO -> traficoTtlHours;
             default -> defaultTtlHours;
         };
     }
