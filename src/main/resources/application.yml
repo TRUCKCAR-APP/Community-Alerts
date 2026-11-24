@@ -50,6 +50,8 @@ truckcar:
     # SOS sin ubicación: se completa con la última posición del conductor en fleets-drivers (llamada interna).
     fleets-drivers-url: ${TRUCKCAR_SERVICES_FLEETS_DRIVERS_URL:http://localhost:8081}
     fleets-drivers-timeout-ms: ${TRUCKCAR_SERVICES_FLEETS_DRIVERS_TIMEOUT_MS:1500}
+    # User-Identity: conductores ACTIVA de la transportadora que pide los SOS de su flota (/companies/me/drivers).
+    user-identity-url: ${TRUCKCAR_SERVICES_USER_IDENTITY_URL:http://localhost:8080}
   outbox:
     publish-interval-ms: ${TRUCKCAR_OUTBOX_PUBLISH_INTERVAL_MS:1000}
     batch-size: ${TRUCKCAR_OUTBOX_BATCH_SIZE:100}
