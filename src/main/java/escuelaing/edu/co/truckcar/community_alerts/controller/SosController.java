@@ -7,7 +7,9 @@ import escuelaing.edu.co.truckcar.community_alerts.dto.response.SosAlertResponse
 import escuelaing.edu.co.truckcar.community_alerts.exception.AlertUnauthenticatedException;
 import escuelaing.edu.co.truckcar.community_alerts.exception.SosAccessDeniedException;
 import escuelaing.edu.co.truckcar.community_alerts.model.SosStatus;
+import escuelaing.edu.co.truckcar.community_alerts.service.CompanyDriversClient;
 import escuelaing.edu.co.truckcar.community_alerts.service.SosService;
+import org.springframework.http.HttpHeaders;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +29,8 @@ import java.util.Set;
 
 /**
  * Botón SOS. Lo dispara solo un CONDUCTOR (el conductor es el del JWT, X-Auth-User); la torre de control
- * (COORDINADOR o ADMIN) consulta los activos y los atiende.
+ * (COORDINADOR o ADMIN) consulta los activos y los atiende. La transportadora también atiende y resuelve los SOS de
+ * sus propios conductores (afiliación ACTIVA, comprobada en User-Identity con su token).
  */
 @RestController
 @RequestMapping("/api/v1/alerts/sos")
@@ -39,6 +42,7 @@ public class SosController {
     private static final Set<String> TOWER_ROLES = Set.of("COORDINADOR", "ADMIN");
 
     private final SosService service;
+    private final CompanyDriversClient companyDrivers;
 
     /**
      * 202: el SOS quedó registrado y su evento en camino. Un reintento con el mismo clientEventId responde 200.
@@ -85,17 +89,33 @@ public class SosController {
     public SosAlertResponse acknowledge(
             @PathVariable Long sosId,
             @RequestHeader(value = AUTH_USER_HEADER, required = false) String userId,
-            @RequestHeader(value = AUTH_ROLE_HEADER, required = false) String role) {
-        return SosAlertResponse.of(service.acknowledge(sosId, requireTower(userId, role)));
+            @RequestHeader(value = AUTH_ROLE_HEADER, required = false) String role,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
+        return SosAlertResponse.of(service.acknowledge(sosId, requireManager(sosId, userId, role, authorization)));
     }
 
+    /** Cierra la emergencia (sale de las listas de SOS abiertos). notes: cómo se resolvió, opcional. */
     @PatchMapping("/{sosId}/resolve")
     public SosAlertResponse resolve(
             @PathVariable Long sosId,
             @RequestParam(required = false) String notes,
             @RequestHeader(value = AUTH_USER_HEADER, required = false) String userId,
-            @RequestHeader(value = AUTH_ROLE_HEADER, required = false) String role) {
-        return SosAlertResponse.of(service.resolve(sosId, requireTower(userId, role), notes));
+            @RequestHeader(value = AUTH_ROLE_HEADER, required = false) String role,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
+        return SosAlertResponse.of(service.resolve(sosId, requireManager(sosId, userId, role, authorization), notes));
+    }
+
+    /** La torre gestiona cualquier SOS; la transportadora, solo los de sus conductores con la afiliación ACTIVA. */
+    private String requireManager(Long sosId, String userId, String role, String authorization) {
+        if (!"TRANSPORTADORA".equals(role)) {
+            return requireTower(userId, role);
+        }
+        String user = requireUser(userId);
+        String driverId = service.get(sosId).getDriverId();
+        if (driverId == null || !companyDrivers.activeDriverIds(authorization).contains(driverId)) {
+            throw new SosAccessDeniedException("Este SOS no es de un conductor de su empresa");
+        }
+        return user;
     }
 
     private static String requireTower(String userId, String role) {
