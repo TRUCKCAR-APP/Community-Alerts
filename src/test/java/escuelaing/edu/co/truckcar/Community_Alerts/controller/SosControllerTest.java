@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -24,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -32,13 +34,34 @@ class SosControllerTest {
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final SosService service = mock(SosService.class);
-    private final SosController controller = new SosController(service);
+    private final escuelaing.edu.co.truckcar.community_alerts.service.CompanyDriversClient companyDrivers =
+            mock(escuelaing.edu.co.truckcar.community_alerts.service.CompanyDriversClient.class);
+    private final SosController controller = new SosController(service, companyDrivers);
     private final JsonNode body = mapper.createObjectNode().put("latitude", 4.6).put("longitude", -74.1);
 
     private static SosAlert sos() {
         return SosAlert.builder().id(1L).driverId("driver-ana").latitude(4.6).longitude(-74.1)
                 .locationSource(SosLocationSource.DEVICE_GPS)
                 .status(SosStatus.ACTIVE).triggeredAt(Instant.now()).receivedAt(Instant.now()).build();
+    }
+
+    /** La transportadora atiende y resuelve los SOS de sus conductores, nunca los de otra empresa. */
+    @Test
+    void aCompanyManagesOnlyTheSosOfItsOwnDrivers() {
+        when(service.get(1L)).thenReturn(sos());
+        when(companyDrivers.activeDriverIds("Bearer andinos")).thenReturn(Set.of("driver-ana"));
+        when(companyDrivers.activeDriverIds("Bearer pacifico")).thenReturn(Set.of("driver-jorge"));
+        SosAlert resolved = sos();
+        resolved.setStatus(SosStatus.RESOLVED);
+        when(service.resolve(1L, "andinos-user", "Grúa en camino")).thenReturn(resolved);
+
+        assertThat(controller.resolve(1L, "Grúa en camino", "andinos-user", "TRANSPORTADORA", "Bearer andinos").getStatus())
+                .isEqualTo("RESOLVED");
+        assertThatThrownBy(() -> controller.acknowledge(1L, "pacifico-user", "TRANSPORTADORA", "Bearer pacifico"))
+                .isInstanceOf(SosAccessDeniedException.class).hasMessageContaining("no es de un conductor de su empresa");
+        assertThatThrownBy(() -> controller.resolve(1L, null, "gen-1", "GENERADOR", "Bearer x"))
+                .isInstanceOf(SosAccessDeniedException.class);
+        verify(service, never()).acknowledge(eq(1L), any());
     }
 
     @Test
@@ -85,16 +108,16 @@ class SosControllerTest {
     @Test
     void onlyTheControlTowerListsAndAttendsSos() {
         assertThatThrownBy(() -> controller.active(null, "driver-ana", "CONDUCTOR")).isInstanceOf(SosAccessDeniedException.class);
-        assertThatThrownBy(() -> controller.acknowledge(1L, "gen-1", "GENERADOR")).isInstanceOf(SosAccessDeniedException.class);
+        assertThatThrownBy(() -> controller.acknowledge(1L, "gen-1", "GENERADOR", null)).isInstanceOf(SosAccessDeniedException.class);
 
         when(service.list(null)).thenReturn(List.of(sos()));
         assertThat(controller.active(null, "coord-1", "COORDINADOR")).hasSize(1);
         when(service.list(List.of(SosStatus.ACTIVE))).thenReturn(List.of());
         assertThat(controller.active(List.of(SosStatus.ACTIVE), "coord-1", "COORDINADOR")).isEmpty();
         when(service.acknowledge(1L, "admin-1")).thenReturn(sos());
-        assertThat(controller.acknowledge(1L, "admin-1", "ADMIN").getId()).isEqualTo(1L);
+        assertThat(controller.acknowledge(1L, "admin-1", "ADMIN", null).getId()).isEqualTo(1L);
         when(service.resolve(1L, "admin-1", "Atendido")).thenReturn(sos());
-        assertThat(controller.resolve(1L, "Atendido", "admin-1", "ADMIN").getId()).isEqualTo(1L);
+        assertThat(controller.resolve(1L, "Atendido", "admin-1", "ADMIN", null).getId()).isEqualTo(1L);
     }
 
     @Test

@@ -176,6 +176,11 @@ public class SosService {
         return saved;
     }
 
+    @Transactional(readOnly = true)
+    public SosAlert get(Long sosId) {
+        return repository.findById(sosId).orElseThrow(() -> new AlertNotFoundException("No existe el SOS #" + sosId));
+    }
+
     /** Idempotente: atender un SOS ya atendido devuelve su estado sin volver a emitir el evento. */
     @Transactional
     public SosAlert acknowledge(Long sosId, String coordinatorId) {
