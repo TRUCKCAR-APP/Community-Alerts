@@ -56,6 +56,11 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.FORBIDDEN, "forbidden", "Acceso denegado", ex.getMessage());
     }
 
+    @ExceptionHandler(CompanyLookupUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handleCompanyLookupUnavailable(CompanyLookupUnavailableException ex) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, "service-unavailable", "Servicio no disponible", ex.getMessage());
+    }
+
     @ExceptionHandler(AlertUnauthenticatedException.class)
     public ResponseEntity<ProblemDetail> handleUnauthenticated(AlertUnauthenticatedException ex) {
         return problem(HttpStatus.UNAUTHORIZED, "unauthenticated", "Usuario no autenticado", ex.getMessage());
